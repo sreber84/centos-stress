@@ -3,8 +3,6 @@
 # Entrypoint script for Load Generator Docker Image
 set -e
 
-start_time=$(echo "$(date -d "5 minutes" "+%Y%m%d%H%M%S") - ($(date +%s)%60)" | bc)
-
 case "${RUN}" in
   stress)
     [[ "${STRESS_CPU}" ]] && STRESS_CPU="--cpu ${STRESS_CPU}"
@@ -18,7 +16,7 @@ case "${RUN}" in
     NUM="$(echo $TARGET_IP | wc -w)"
     [[ "${ROUTER_IP}" ]] && echo "${ROUTER_IP} ${TARGET_IP}" >> /etc/hosts
 
-    while [[ $(date "+%Y%m%d%H%M%S") -lt ${start_time} ]]; do sleep 5; done
+    while [[ -z $(curl -s http://"${GUN}":9000) ]]; do sleep 5; echo "not ready"; done
     exec jmeter -n -t test.jmx -Jnum=${NUM} -Jramp=${JMETER_RAMP} \
       -Jduration=${JMETER_TIME} -Jtps=${JMETER_TPS} -Jipaddr1=${TARGET[0]} \
       -Jipaddr2=${TARGET[1]} -Jipaddr3=${TARGET[2]} -Jipaddr4=${TARGET[3]} \
