@@ -21,7 +21,8 @@ case "${RUN}" in
       -Jduration=${JMETER_TIME} -Jtps=${JMETER_TPS} -Jipaddr1=${TARGET[0]} \
       -Jipaddr2=${TARGET[1]} -Jipaddr3=${TARGET[2]} -Jipaddr4=${TARGET[3]} \
       -Jipaddr5=${TARGET[4]} -Jipaddr6=${TARGET[5]} -Jipaddr7=${TARGET[6]} \
-      -Jipaddr8=${TARGET[7]} -Jipaddr9=${TARGET[8]} -Jport=${TARGET_PORT}
+      -Jipaddr8=${TARGET[7]} -Jipaddr9=${TARGET[8]} -Jport=${TARGET_PORT} \
+      -l testplan.jtl -j testplan.log
     ;;
   *)
     echo "Need to specify what to run."
