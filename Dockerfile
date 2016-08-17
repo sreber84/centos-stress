@@ -1,7 +1,8 @@
 FROM centos:latest 
 
 # Install required packages 
-RUN yum install -y bc java-1.8.0-openjdk-headless tar && yum clean all
+RUN yum install -y bc java-1.8.0-openjdk-headless openssh-clients rsync tar &&
+    yum clean all
 
 # Setup jmeter
 RUN mkdir -p /opt/jmeter && \
