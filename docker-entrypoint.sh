@@ -11,10 +11,10 @@ case "${RUN}" in
     ;;
   jmeter)
     IFS=$'\n' 
-    TARGET=($(echo $TARGET_IP | sed 's/\:/\n/g'))
-    TARGET_IP="$(echo $TARGET_IP | sed 's/\:/\ /g')"
-    NUM="$(echo $TARGET_IP | wc -w)"
-    [[ "${ROUTER_IP}" ]] && echo "${ROUTER_IP} ${TARGET_IP}" >> /etc/hosts
+    TARGET=($(echo $TARGET_HOST | sed 's/\:/\n/g'))
+    TARGET_HOST="$(echo $TARGET_HOST | sed 's/\:/\ /g')"
+    NUM="$(echo $TARGET_HOST | wc -w)"
+    [[ "${ROUTER_IP}" ]] && echo "${ROUTER_IP} ${TARGET_HOST}" >> /etc/hosts
 
     while [[ -z $(curl -s http://"${GUN}":9000) ]]; do sleep 5; echo "not ready"; done
     exec jmeter -n -t test.jmx -Jnum=${NUM} -Jramp=${JMETER_RAMP} \
