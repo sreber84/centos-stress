@@ -23,7 +23,7 @@ case "${RUN}" in
       -Jipaddr5=${TARGET[4]} -Jipaddr6=${TARGET[5]} -Jipaddr7=${TARGET[6]} \
       -Jipaddr8=${TARGET[7]} -Jipaddr9=${TARGET[8]} -Jport=${TARGET_PORT} \
       -l jmeter-"${HOSTNAME}"-"$(date +%y%m%d%H%M)".jtl -j jmeter-"${HOSTNAME}"-"$(date +%y%m%d%H%M)".log
-    scp *.jtl ${GUN}:~/ && scp *.log ${GUN}:~/
+    scp *.jtl *.log ${GUN}:/tmp/
     ;;
   *)
     echo "Need to specify what to run."
