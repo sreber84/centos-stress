@@ -1,7 +1,7 @@
 FROM centos:latest 
 
 # Install required packages 
-RUN yum install -y bc java-1.8.0-openjdk-headless openssh-clients rsync tar unzip && \
+RUN yum install -y bc dejavu-sans-fonts java-1.8.0-openjdk-headless openssh-clients rsync tar unzip && \
     yum clean all
 
 # Setup jmeter
