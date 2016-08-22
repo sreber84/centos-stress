@@ -25,7 +25,7 @@ case "${RUN}" in
       -Jipaddr8=${TARGET[7]} -Jipaddr9=${TARGET[8]} -Jport=${TARGET_PORT} \
       -Jresults_file="${results_filename}".jtl -l "${results_filename}".jtl \
       -j "${results_filename}".log
-    pbench_dir=$(ssh "${GUN}" 'cd /var/lib/pbench-agent && cd to* && pwd')
+    pbench_dir=$(ssh "${GUN}" 'cd /var/lib/pbench-agent && cd pb*/. && pwd')
     scp *.jtl *.log *.png ${GUN}:${pbench_dir}
     ;;
   *)
