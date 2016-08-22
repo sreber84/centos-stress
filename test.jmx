@@ -336,7 +336,7 @@
           <stringProp name="excludeLabels"></stringProp>
           <boolProp name="excludeSamplesWithRegex">false</boolProp>
           <intProp name="exportMode">0</intProp>
-          <stringProp name="filePrefix">GG-</stringProp>
+          <stringProp name="filePrefix">${__P(results_file)}-</stringProp>
           <stringProp name="forceY"></stringProp>
           <stringProp name="granulation">10000</stringProp>
           <intProp name="graphHeight">600</intProp>
