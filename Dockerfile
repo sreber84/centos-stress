@@ -15,4 +15,4 @@ RUN mkdir -p /opt/jmeter && \
 COPY lib/ /opt/jmeter/lib/
 COPY docker-entrypoint.sh test.jmx /
 
-CMD ["docker-entrypoint.sh"]
+CMD ["/docker-entrypoint.sh"]
