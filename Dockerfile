@@ -10,7 +10,7 @@ RUN mkdir -p /opt/jmeter && \
 	| tar xz --strip=1 -C /opt/jmeter && \
         #echo "jmeter.save.saveservice.url=true" >> /opt/jmeter/bin/jmeter.properties && \
         #echo "jmeter.save.saveservice.thread_counts=true" >> /opt/jmeter/bin/jmeter.properties && \
-	echo "jmeter.save.saveservice.autoflush=true" >> /opt/jmeter/bin/user.properties && \
+	#echo "jmeter.save.saveservice.autoflush=true" >> /opt/jmeter/bin/user.properties && \
 	ln -s /opt/jmeter/bin/jmeter.sh /usr/bin/jmeter
 
 WORKDIR /opt/jmeter
