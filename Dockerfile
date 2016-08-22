@@ -11,7 +11,7 @@ RUN mkdir -p /opt/jmeter && \
         echo "jmeter.save.saveservice.url=true" >> /opt/jmeter/bin/jmeter.properties && \
 	ln -s /opt/jmeter/bin/jmeter.sh /usr/bin/jmeter
 
-COPY lib/ /opt/jmeter
+COPY lib/ /opt/jmeter/lib/
 COPY docker-entrypoint.sh test.jmx /
 
 CMD ["docker-entrypoint.sh"]
