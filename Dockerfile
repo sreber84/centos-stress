@@ -14,7 +14,7 @@ RUN mkdir -p /opt/jmeter && \
 	ln -s /opt/jmeter/bin/jmeter.sh /usr/bin/jmeter
 
 WORKDIR /opt/jmeter
-COPY lib/ lib/
-COPY docker-entrypoint.sh test.jmx ./
+COPY JMeterPlugins-Extras-1.4.0.zip docker-entrypoint.sh test.jmx ./
+RUN unzip -n JMeterPlugins-Extras-1.4.0.zip
 
 CMD ["./docker-entrypoint.sh"]

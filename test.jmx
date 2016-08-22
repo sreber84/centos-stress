@@ -346,7 +346,7 @@
           <stringProp name="limitRows">150</stringProp>
           <stringProp name="lineWeight"></stringProp>
           <stringProp name="lowCountLimit"></stringProp>
-          <stringProp name="outputBaseFolder">/</stringProp>
+          <stringProp name="outputBaseFolder">/opt/jmeter/</stringProp>
           <boolProp name="paintGradient">true</boolProp>
           <boolProp name="paintZeroing">true</boolProp>
           <boolProp name="preventOutliers">false</boolProp>
