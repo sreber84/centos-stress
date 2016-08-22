@@ -15,6 +15,6 @@ RUN mkdir -p /opt/jmeter && \
 
 WORKDIR /opt/jmeter
 COPY lib/ lib/
-COPY docker-entrypoint.sh test.jmx .
+COPY docker-entrypoint.sh test.jmx ./
 
 CMD ["./docker-entrypoint.sh"]
