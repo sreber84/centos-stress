@@ -336,9 +336,9 @@
           <stringProp name="excludeLabels"></stringProp>
           <boolProp name="excludeSamplesWithRegex">false</boolProp>
           <intProp name="exportMode">0</intProp>
-          <stringProp name="filePrefix"></stringProp>
+          <stringProp name="filePrefix">GG-</stringProp>
           <stringProp name="forceY"></stringProp>
-          <stringProp name="granulation">60000</stringProp>
+          <stringProp name="granulation">10000</stringProp>
           <intProp name="graphHeight">600</intProp>
           <intProp name="graphWidth">800</intProp>
           <stringProp name="includeLabels"></stringProp>
@@ -346,12 +346,12 @@
           <stringProp name="limitRows">150</stringProp>
           <stringProp name="lineWeight"></stringProp>
           <stringProp name="lowCountLimit"></stringProp>
-          <stringProp name="outputBaseFolder"></stringProp>
+          <stringProp name="outputBaseFolder">/</stringProp>
           <boolProp name="paintGradient">true</boolProp>
           <boolProp name="paintZeroing">true</boolProp>
           <boolProp name="preventOutliers">false</boolProp>
           <boolProp name="relativeTimes">false</boolProp>
-          <stringProp name="resultsFileName"></stringProp>
+          <stringProp name="resultsFileName">${__P(results_filename)}</stringProp>
           <stringProp name="startOffset"></stringProp>
           <stringProp name="successFilter"></stringProp>
         </kg.apc.jmeter.listener.GraphsGeneratorListener>
