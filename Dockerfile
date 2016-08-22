@@ -9,10 +9,12 @@ RUN mkdir -p /opt/jmeter && \
     curl -Ls http://mirrors.gigenet.com/apache/jmeter/binaries/apache-jmeter-3.0.tgz \
 	| tar xz --strip=1 -C /opt/jmeter && \
         echo "jmeter.save.saveservice.url=true" >> /opt/jmeter/bin/jmeter.properties && \
+        echo "jmeter.save.saveservice.thread_counts=true" >> /opt/jmeter/bin/jmeter.properties && \
 	echo "jmeter.save.saveservice.autoflush=true" >> /opt/jmeter/bin/user.properties && \
 	ln -s /opt/jmeter/bin/jmeter.sh /usr/bin/jmeter
 
-COPY lib/ /opt/jmeter/lib/
-COPY docker-entrypoint.sh test.jmx /
+WORKDIR /opt/jmeter
+COPY lib/ lib/
+COPY docker-entrypoint.sh test.jmx .
 
-CMD ["/docker-entrypoint.sh"]
+CMD ["./docker-entrypoint.sh"]
