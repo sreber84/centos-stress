@@ -295,7 +295,7 @@
           <stringProp name="filename"></stringProp>
         </ResultCollector>
         <hashTree/>
-        <ResultCollector guiclass="ViewResultsFullVisualizer" testclass="ResultCollector" testname="View Results Tree" enabled="true">
+        <ResultCollector guiclass="ViewResultsFullVisualizer" testclass="ResultCollector" testname="View Results Tree" enabled="false">
           <boolProp name="ResultCollector.error_logging">false</boolProp>
           <objProp>
             <name>saveConfig</name>
@@ -326,7 +326,7 @@
               <idleTime>true</idleTime>
             </value>
           </objProp>
-          <stringProp name="filename">jmeter.jtl</stringProp>
+          <stringProp name="filename"></stringProp>
         </ResultCollector>
         <hashTree/>
         <kg.apc.jmeter.listener.GraphsGeneratorListener guiclass="TestBeanGUI" testclass="kg.apc.jmeter.listener.GraphsGeneratorListener" testname="jp@gc - Graphs Generator" enabled="true">
@@ -338,7 +338,7 @@
           <intProp name="exportMode">0</intProp>
           <stringProp name="filePrefix">GG-</stringProp>
           <stringProp name="forceY"></stringProp>
-          <stringProp name="granulation">60000</stringProp>
+          <stringProp name="granulation">10000</stringProp>
           <intProp name="graphHeight">600</intProp>
           <intProp name="graphWidth">800</intProp>
           <stringProp name="includeLabels"></stringProp>
@@ -351,7 +351,7 @@
           <boolProp name="paintZeroing">true</boolProp>
           <boolProp name="preventOutliers">false</boolProp>
           <boolProp name="relativeTimes">false</boolProp>
-          <stringProp name="resultsFileName">jmeter.jtl</stringProp>
+          <stringProp name="resultsFileName">/opt/jmeter/${__P(results_file)}</stringProp>
           <stringProp name="startOffset"></stringProp>
           <stringProp name="successFilter"></stringProp>
         </kg.apc.jmeter.listener.GraphsGeneratorListener>
