@@ -351,7 +351,7 @@
           <boolProp name="paintZeroing">true</boolProp>
           <boolProp name="preventOutliers">false</boolProp>
           <boolProp name="relativeTimes">false</boolProp>
-          <stringProp name="resultsFileName">/opt/jmeter/${__P(results_filename)}</stringProp>
+          <stringProp name="resultsFileName">/opt/jmeter/${__P(results_file)}</stringProp>
           <stringProp name="startOffset"></stringProp>
           <stringProp name="successFilter"></stringProp>
         </kg.apc.jmeter.listener.GraphsGeneratorListener>
