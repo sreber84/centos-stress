@@ -17,7 +17,8 @@ case "${RUN}" in
     [[ "${ROUTER_IP}" ]] && echo "${ROUTER_IP} ${TARGET_HOST}" >> /etc/hosts
 
     while [[ -z $(curl -s http://"${GUN}":9000) ]]; do sleep 5; echo "not ready"; done
-    results_filename=jmeter-"${HOSTNAME}"-"$(date +%y%m%d%H%M)".jtl 
+    #results_filename=jmeter-"${HOSTNAME}"-"$(date +%y%m%d%H%M)".jtl 
+    results_filename=jmeter.jtl
     jmeter -n -t test.jmx -Jnum=${NUM} -Jramp=${JMETER_RAMP} \
       -Jduration=${JMETER_TIME} -Jtps=${JMETER_TPS} -Jipaddr1=${TARGET[0]} \
       -Jipaddr2=${TARGET[1]} -Jipaddr3=${TARGET[2]} -Jipaddr4=${TARGET[3]} \
