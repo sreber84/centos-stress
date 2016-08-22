@@ -26,6 +26,7 @@ case "${RUN}" in
       -Jresults_file=${results_filename} \
       -l ${results_filename}  -j jmeter-"${HOSTNAME}"-"$(date +%y%m%d%H%M)".log
     scp *.jtl *.log *.png ${GUN}:/tmp/
+    sleep 120
     ;;
   *)
     echo "Need to specify what to run."
