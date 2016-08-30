@@ -26,7 +26,9 @@ case "${RUN}" in
       -Jresults_file="${results_filename}".jtl -l "${results_filename}".jtl \
       -j "${results_filename}".log
     pbench_dir=$(ssh "${GUN}" 'cd /var/lib/pbench-agent && cd pb*/. && pwd')
-    scp *.jtl *.log *.png ${GUN}:${pbench_dir}
+    if [[ -d "${pbench_dir}" ]]; then
+      scp *.jtl *.log *.png ${GUN}:${pbench_dir}
+    fi
     ;;
   *)
     echo "Need to specify what to run."
