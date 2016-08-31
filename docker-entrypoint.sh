@@ -26,7 +26,7 @@ case "${RUN}" in
       -Jresults_file="${results_filename}".jtl -l "${results_filename}".jtl \
       -j "${results_filename}".log -Jgun=${GUN}
     pbench_dir=$(ssh "${GUN}" 'cd /var/lib/pbench-agent && cd pb*/. && pwd')
-    if [[ -d "${pbench_dir}" ]]; then
+    if [[ "${pbench_dir}" == *pbench-user-benchmark* ]]; then
       scp *.jtl *.log *.png ${GUN}:${pbench_dir}
     fi
     ;;
