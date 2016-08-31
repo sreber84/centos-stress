@@ -24,7 +24,7 @@ case "${RUN}" in
       -Jipaddr5=${TARGET[4]} -Jipaddr6=${TARGET[5]} -Jipaddr7=${TARGET[6]} \
       -Jipaddr8=${TARGET[7]} -Jipaddr9=${TARGET[8]} -Jport=${TARGET_PORT} \
       -Jresults_file="${results_filename}".jtl -l "${results_filename}".jtl \
-      -j "${results_filename}".log
+      -j "${results_filename}".log -Jgun=${GUN}
     pbench_dir=$(ssh "${GUN}" 'cd /var/lib/pbench-agent && cd pb*/. && pwd')
     if [[ -d "${pbench_dir}" ]]; then
       scp *.jtl *.log *.png ${GUN}:${pbench_dir}
