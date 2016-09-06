@@ -14,6 +14,7 @@ case "${RUN}" in
     TARGET=($(echo $TARGET_HOST | sed 's/\:/\n/g'))
     TARGET_HOST="$(echo $TARGET_HOST | sed 's/\:/\ /g')"
     NUM="$(echo $TARGET_HOST | wc -w)"
+    ((JMETER_TPS*=60))
     [[ "${ROUTER_IP}" ]] && echo "${ROUTER_IP} ${TARGET_HOST}" >> /etc/hosts
 
     while [[ -z $(curl -s http://"${GUN}":9090) ]]; do sleep 5; echo "not ready"; done
