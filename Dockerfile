@@ -1,3 +1,4 @@
+# vim:set ft=dockerfile:
 FROM centos:latest 
 
 # Install required packages 

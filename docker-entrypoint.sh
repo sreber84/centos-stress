@@ -7,7 +7,7 @@ case "${RUN}" in
   stress)
     [[ "${STRESS_CPU}" ]] && STRESS_CPU="--cpu ${STRESS_CPU}"
     [[ "${STRESS_TIME}" ]] && STRESS_TIME="--timeout ${STRESS_TIME}"
-    exec stress "${STRESS_CPU}" "${STRESS_TIME}"
+    exec stress ${STRESS_CPU} ${STRESS_TIME}
     ;;
   jmeter)
     IFS=$'\n' 
