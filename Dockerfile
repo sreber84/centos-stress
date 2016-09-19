@@ -2,6 +2,7 @@ FROM centos:latest
 
 # Install required packages 
 RUN yum install -y bc java-1.8.0-openjdk openssh-clients rsync tar unzip && \
+    yum localinstall -y https://dl.fedoraproject.org/pub/epel/6/x86_64/stress-1.0.4-4.el6.x86_64.rpm && \
     yum clean all
 
 # Setup jmeter
