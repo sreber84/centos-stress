@@ -6,8 +6,8 @@ set -e
 case "${RUN}" in
   stress)
     [[ "${STRESS_CPU}" ]] && STRESS_CPU="--cpu ${STRESS_CPU}"
-    [[ "${STRESS_TIME}" ]] && STRESS_TIME="--timeout ${STRESS_TIME}"
-    exec stress ${STRESS_CPU} ${STRESS_TIME}
+    [[ "${RUN_TIME}" ]] && RUN_TIME="--timeout ${RUN_TIME}"
+    exec stress ${STRESS_CPU} ${RUN_TIME}
     ;;
   jmeter)
     IFS=$'\n' 
@@ -27,7 +27,7 @@ case "${RUN}" in
 
     # Call JMeter packed with ENV vars
     jmeter -n -t test.jmx -Jnum=${NUM} -Jramp=${JMETER_RAMP} \
-      -Jduration=${JMETER_TIME} -Jtpm=${JMETER_TPS} -Jipaddr1=${TARGET[0]} \
+      -Jduration=${RUN_TIME} -Jtpm=${JMETER_TPS} -Jipaddr1=${TARGET[0]} \
       -Jipaddr2=${TARGET[1]} -Jipaddr3=${TARGET[2]} -Jipaddr4=${TARGET[3]} \
       -Jipaddr5=${TARGET[4]} -Jipaddr6=${TARGET[5]} -Jipaddr7=${TARGET[6]} \
       -Jipaddr8=${TARGET[7]} -Jipaddr9=${TARGET[8]} -Jport=${TARGET_PORT} \
