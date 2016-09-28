@@ -15,6 +15,12 @@ RUN mkdir -p /opt/jmeter && \
 	echo "jmeter.save.saveservice.autoflush=true" >> /opt/jmeter/bin/user.properties && \
 	ln -s /opt/jmeter/bin/jmeter.sh /usr/bin/jmeter
 
+# Setup slstress
+WORKDIR /usr/local/bin
+RUN curl -Ls https://raw.githubusercontent.com/jmencak/perf-tools/master/bin/x86-64/slstress -O \
+             https://raw.githubusercontent.com/jmencak/perf-tools/master/slstress_go/logger.sh -O \
+             && chmod 755 ./slstress ./logger.sh
+
 WORKDIR /opt/jmeter
 COPY JMeterPlugins-Standard-1.4.0.zip JMeterPlugins-Extras-1.4.0.zip docker-entrypoint.sh test.jmx ./
 RUN unzip -n \*.zip && \
