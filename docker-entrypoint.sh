@@ -1,5 +1,5 @@
 #!/bin/bash
-# Some parts written for /bin/bash, see arrays in jmeter)
+# Some parts written for /bin/bash, see arrays in jmeter
 # Entrypoint script for Load Generator Docker Image
 
 ProgramName=${0##*/}
@@ -51,19 +51,19 @@ synchronize_pods() {
 
 # basic checks for toybox/busybox/coreutils timeout
 define_timeout_bin() {
-  test "${RUN_TIMEOUT}" || return	# timeout empty, do not define it and just return
+  test "${RUN_TIME}" || return	# timeout empty, do not define it and just return
 
   timeout -t 0 /bin/sleep 0 >/dev/null 2>&1
 
   case $? in
     0)   # we have a busybox timeout with '-t' option for number of seconds
-       timeout="timeout -t ${RUN_TIMEOUT}"
+       timeout="timeout -t ${RUN_TIME}"
     ;;
     1)   # we have toybox's timeout without the '-t' option for number of seconds
-       timeout="timeout ${RUN_TIMEOUT}"
+       timeout="timeout ${RUN_TIME}"
     ;;
     125) # we have coreutil's timeout without the '-t' option for number of seconds
-       timeout="timeout ${RUN_TIMEOUT}"
+       timeout="timeout ${RUN_TIME}"
     ;;
     *)   # couldn't find timeout or unknown version
        warn "running without timeout"
