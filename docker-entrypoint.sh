@@ -9,6 +9,7 @@ url_gun_ws="http://${GUN}:9090"
 gw_hex=$(grep ^eth0 /proc/net/route | head -1 | awk '{print $3}')
 #gateway=$(/sbin/ip route|awk '/default/ { print $3 }')	# sometimes there is no /sbin/ip ...
 gateway=$(printf "%d.%d.%d.%d" 0x${gw_hex:6:2} 0x${gw_hex:4:2} 0x${gw_hex:2:2} 0x${gw_hex:0:2})
+JVM_ARGS=${JVM_ARGS:--Xms512m -Xmx4096m}	# increase heap size by default
 
 fail() {
   echo $@ >&2
@@ -125,7 +126,7 @@ main() {
     ;;
 
     jmeter)
-      IFS=$'\n' 
+      IFS=$'\n'
       # Massage the host data passed in from OSE
       TARGET=($(echo $TARGET_HOST | sed 's/\:/\n/g'))
       TARGET_HOST="$(echo $TARGET_HOST | sed 's/\:/\ /g')"
@@ -136,16 +137,22 @@ main() {
       # Add router IP & hostnames to hosts file
       [ "${ROUTER_IP}" ] && echo "${ROUTER_IP} ${TARGET_HOST}" >> /etc/hosts
 
+      local ips=""
+      local i=0
+      while test $i -lt $NUM ; do
+        ips=${ips}$'\n'"-Jipaddr$(($i+1))=${TARGET[$i]}"
+        i=$((i+1))
+      done
+
       # Wait for Cluster Loader start signal webservice
       synchronize_pods
       results_filename=jmeter-"${HOSTNAME}"-"$(date +%y%m%d%H%M)" 
 
       # Call JMeter packed with ENV vars
       jmeter -n -t test.jmx -Jnum=${NUM} -Jramp=${JMETER_RAMP} \
-        -Jduration=${RUN_TIME} -Jtpm=${JMETER_TPS} -Jipaddr1=${TARGET[0]} \
-        -Jipaddr2=${TARGET[1]} -Jipaddr3=${TARGET[2]} -Jipaddr4=${TARGET[3]} \
-        -Jipaddr5=${TARGET[4]} -Jipaddr6=${TARGET[5]} -Jipaddr7=${TARGET[6]} \
-        -Jipaddr8=${TARGET[7]} -Jipaddr9=${TARGET[8]} -Jport=${TARGET_PORT} \
+        -Jduration=${RUN_TIME} -Jtpm=${JMETER_TPS} \
+        ${ips} \
+        -Jport=${TARGET_PORT} \
         -Jresults_file="${results_filename}".jtl -l "${results_filename}".jtl \
         -j "${results_filename}".log -Jgun="${GUN}" || die $? "${RUN} failed: $?"
 
