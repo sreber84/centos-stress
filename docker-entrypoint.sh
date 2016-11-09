@@ -159,6 +159,46 @@ main() {
       have_server "${GUN}" && scp -p *.jtl *.log *.png ${GUN}:${PBENCH_DIR}
     ;; 
 
+    vegeta)
+      local vegeta_log=/tmp/${HOSTNAME}-${gateway}.log
+      local rate=5000			# rate of client requests [s] (per all targets; i.e. /#targets per target)
+      local requests_timeout=30s	# Requests timeout
+      local idle_connections=20000
+      local dir_test=./
+      local targets_lst=$dir_test/targets.txt
+      local results_bin=$dir_test/results.bin
+      local results_csv=$dir_test/results.csv
+      local vegeta=/usr/local/bin/vegeta
+
+      ulimit -n 1048576	# use the same limits as HAProxy pod
+      sysctl -w net.ipv4.tcp_tw_reuse=1	# safe to use on client side
+
+      # Length of a content of an exported environment variable is limited by 128k - <variable length> - 1
+      # i.e.: for TARGET_HOST the limit is 131059; if you get "Argument list too long", you know you've hit it 
+      echo $TARGET_HOST | tr ':' '\n' | sed 's|^|GET http://|' > ${targets_lst}
+
+      # TODO: pass VEGETA_TARGETS file to be downloaded instead of using the environment variable
+#      test "${VEGETA_TARGETS}" || die $? "${RUN} failed: $?: vegeta targets list unset"
+#      curl -Ls ${VEGETA_TARGETS} > ${targets_lst} || \
+#        die $? "${RUN} failed: $?: unable to retrieve vegeta targets list \`${VEGETA_TARGETS}'"
+
+      synchronize_pods
+      $timeout \
+        $vegeta attack -connections ${idle_connections} \
+                       -targets=${targets_lst} \
+                       -rate=${VEGETA_RPS:-$rate} \
+                       -timeout=${requests_timeout} \
+                       -duration=${RUN_TIME}s > ${results_bin} 2>&1 | tee ${vegeta_log} \
+        || die $? "${RUN} failed: $?"
+
+      # process the results
+      $vegeta report < ${results_bin}
+      $vegeta dump -dumper csv -inputs=${results_bin} > ${results_csv}
+
+      have_server "${GUN}" && scp -p *.txt *.bin *.csv ${vegeta_log} ${GUN}:${PBENCH_DIR}
+      $(timeout_exit_status) || die $? "${RUN} failed: $?"
+    ;;
+
     *)
       die 1 "Need to specify what to run."
     ;;
