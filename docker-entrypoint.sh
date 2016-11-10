@@ -166,6 +166,7 @@ main() {
       local idle_connections=20000
       local dir_test=./
       local targets_lst=$dir_test/targets.txt
+      local latency_html=$dir_test/latency.html
       local results_bin=$dir_test/results.bin
       local results_csv=$dir_test/results.csv
       local vegeta=/usr/local/bin/vegeta
@@ -194,8 +195,10 @@ main() {
       # process the results
       $vegeta report < ${results_bin}
       $vegeta dump -dumper csv -inputs=${results_bin} > ${results_csv}
+      $vegeta report -reporter=plot < ${results_bin} > ${latency_html}
 
-      have_server "${GUN}" && scp -p *.txt *.bin *.csv ${vegeta_log} ${GUN}:${PBENCH_DIR}
+      have_server "${GUN}" && \
+        scp -p *.txt *.bin *.csv ${vegeta_log} ${latency_html} ${GUN}:${PBENCH_DIR}
       $(timeout_exit_status) || die $? "${RUN} failed: $?"
     ;;
 
