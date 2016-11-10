@@ -195,7 +195,7 @@ main() {
       # process the results
       $vegeta report < ${results_bin}
       $vegeta dump -dumper csv -inputs=${results_bin} > ${results_csv}
-      $vegeta report -reporter=plot < ${results_bin} > ${latency_html}
+#      $vegeta report -reporter=plot < ${results_bin} > ${latency_html}
 
       have_server "${GUN}" && \
         scp -p *.txt *.bin *.csv ${vegeta_log} ${latency_html} ${GUN}:${PBENCH_DIR}
