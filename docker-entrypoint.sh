@@ -50,6 +50,11 @@ synchronize_pods() {
   done
 }
 
+get_cfg() {
+  local path="$1"
+  curl -Ls "${url_gun_ws}/${path}"
+}
+
 # basic checks for toybox/busybox/coreutils timeout
 define_timeout_bin() {
   test "${RUN_TIME}" || return	# timeout empty, do not define it and just return
@@ -165,6 +170,7 @@ main() {
       local requests_timeout=30s	# Requests timeout
       local idle_connections=20000
       local dir_test=./
+      local targets_awk=targets.awk
       local targets_lst=$dir_test/targets.txt
       local latency_html=$dir_test/latency.html
       local results_bin=$dir_test/results.bin
@@ -176,13 +182,11 @@ main() {
 
       # Length of a content of an exported environment variable is limited by 128k - <variable length> - 1
       # i.e.: for TARGET_HOST the limit is 131059; if you get "Argument list too long", you know you've hit it 
-      echo $TARGET_HOST | tr ':' '\n' | sed 's|^|GET http://|' > ${targets_lst}
-
-      # TODO: pass VEGETA_TARGETS file to be downloaded instead of using the environment variable
-#      test "${VEGETA_TARGETS}" || die $? "${RUN} failed: $?: vegeta targets list unset"
-#      curl -Ls ${VEGETA_TARGETS} > ${targets_lst} || \
-#        die $? "${RUN} failed: $?: unable to retrieve vegeta targets list \`${VEGETA_TARGETS}'"
-
+#      echo $TARGET_HOST | tr ':' '\n' | sed 's|^|GET http://|' > ${targets_lst}
+      get_cfg ${RUN}/${IDENTIFIER}/${targets_awk} > ${targets_awk} 
+      get_cfg routes | awk -f ${targets_awk} > ${targets_lst} || \
+        die $? "${RUN} failed: $?: unable to retrieve vegeta targets list \`${VEGETA_TARGETS}'"
+      
       synchronize_pods
       $timeout \
         $vegeta attack -connections ${idle_connections} \
@@ -195,7 +199,7 @@ main() {
       # process the results
       $vegeta report < ${results_bin}
       $vegeta dump -dumper csv -inputs=${results_bin} > ${results_csv}
-#      $vegeta report -reporter=plot < ${results_bin} > ${latency_html}
+#      $vegeta report -reporter=plot < ${results_bin} > ${latency_html}	# plotted html files are too large
 
       have_server "${GUN}" && \
         scp -p *.txt *.bin *.csv ${vegeta_log} ${latency_html} ${GUN}:${PBENCH_DIR}

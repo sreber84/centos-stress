@@ -19,7 +19,7 @@ RUN mkdir -p /opt/jmeter && \
 WORKDIR /usr/local/bin
 RUN curl -Ls https://raw.githubusercontent.com/jmencak/perf-tools/master/bin/x86-64/slstress -O \
              https://raw.githubusercontent.com/jmencak/perf-tools/master/slstress_go/logger.sh -O \
-             https://raw.githubusercontent.com/jmencak/perf-tools/master/slstress_go/vegeta -O \
+             https://raw.githubusercontent.com/jmencak/perf-tools/master/bin/x86-64/vegeta -O \
              && chmod 755 ./slstress ./logger.sh ./vegeta
 
 WORKDIR /opt/jmeter
