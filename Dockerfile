@@ -2,7 +2,7 @@
 FROM centos:latest 
 
 # Install required packages 
-RUN yum install -y bc java-1.8.0-openjdk openssh-clients rsync tar unzip && \
+RUN yum install -y bc java-1.8.0-openjdk openssh-clients rsync tar unzip gnuplot && \
     yum localinstall -y https://dl.fedoraproject.org/pub/epel/6/x86_64/stress-1.0.4-4.el6.x86_64.rpm && \
     yum clean all
 
@@ -20,10 +20,12 @@ WORKDIR /usr/local/bin
 RUN curl -Ls https://raw.githubusercontent.com/jmencak/perf-tools/master/bin/x86-64/slstress -O \
              https://raw.githubusercontent.com/jmencak/perf-tools/master/slstress_go/logger.sh -O \
              https://raw.githubusercontent.com/jmencak/perf-tools/master/bin/x86-64/vegeta -O \
-             && chmod 755 ./slstress ./logger.sh ./vegeta
+             https://raw.githubusercontent.com/jmencak/perf-tools/master/bin/x86-64/pctl -O \
+             && chmod 755 ./slstress ./logger.sh ./vegeta ./pctl
 
 WORKDIR /opt/jmeter
-COPY JMeterPlugins-Standard-1.4.0.zip JMeterPlugins-Extras-1.4.0.zip docker-entrypoint.sh test.jmx ./
+COPY JMeterPlugins-Standard-1.4.0.zip JMeterPlugins-Extras-1.4.0.zip docker-entrypoint.sh \
+     test.jmx \*.conf ./
 RUN unzip -n \*.zip && \
     rm *.zip
 

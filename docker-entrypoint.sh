@@ -5,6 +5,7 @@
 ProgramName=${0##*/}
 
 # Global variables
+pctl_bin=pctl
 url_gun_ws="http://${GUN}:9090"
 gw_hex=$(grep ^eth0 /proc/net/route | head -1 | awk '{print $3}')
 #gateway=$(/sbin/ip route|awk '/default/ { print $3 }')	# sometimes there is no /sbin/ip ...
@@ -44,10 +45,16 @@ have_server() {
 synchronize_pods() {
   have_server "${GUN}" || return
 
-  while [ -z $(curl -s "${url_gun_ws}") ] ; do 
+  while [ "$(curl -s ${url_gun_ws}/gotime/start)" != "GO" ] ; do 
     sleep 5
     fail "${url_gun_ws} not ready"
   done
+}
+
+announce_finish() {
+  have_server "${GUN}" || return
+
+  curl -s ${url_gun_ws}/gotime/finish
 }
 
 get_cfg() {
@@ -85,6 +92,9 @@ timeout_exit_status() {
     124) # coreutil's return code for timeout
        return 0
     ;;
+    137) # timeout also sends SIGKILL if a process fails to respond
+       return 0
+    ;;
     143) # busybox's return code for timeout with default signal TERM
        return 0
     ;;
@@ -92,13 +102,95 @@ timeout_exit_status() {
   esac
 }
 
+graph_total_latency_pctl() {
+  local results="$1"
+  local dir_out="$2"
+  local graph_conf=$(realpath total_latency_pctl.conf)
+  local graph_data_in_latency=$dir_out/total_latency_pctl.txt
+  local graph_image_out=$dir_out/total_latency_pctl.png
+ 
+  mkdir -p $dir_out
+  rm -f $graph_data_in_latency
+  for err in $(awk -F, '{print $2}' $results | sort -u)
+  do
+    printf "%s\t" $err >> $graph_data_in_latency
+    awk -F, "{if(\$2 == $err) {print (\$3/1000000)}}" < $results  | \
+      $pctl_bin >> $graph_data_in_latency
+  done
+  
+  gnuplot \
+    -e "data_in='$graph_data_in_latency'" \
+    -e "graph_out='$graph_image_out'" \
+    $graph_conf
+}
+
+graph_time_bytes_hits_latency() {
+  local results="$1"
+  local dir_out="$2"
+  local graph_data_in=$dir_out/time_bhl.txt
+
+  local graph_bytes_conf=$(realpath time_bytes.conf)
+  local graph_image_out_bytes=$dir_out/time_bytes.png
+
+  local graph_hits_conf=$(realpath time_hits.conf)
+  local graph_image_out_hits=$dir_out/time_hits.png
+
+  local graph_latency_conf=$(realpath time_latency.conf)
+  local graph_image_out_latency=$dir_out/time_latency.png
+
+  mkdir -p $dir_out
+  cat $results | LC_ALL=C sort -t, -n -k1 | \
+  awk '
+{
+  time=int($1/1000000000)
+  latency += ($3/1000000)
+  bytes_out += $4
+  bytes_in += $5
+  hits += 1
+  if(time_prev == 0) {
+    time_prev=time	# we are just beginning
+  }
+  if(time_prev != time) {
+    printf "%ld\t%ld\t%ld\t%ld\t%lf\n", time_prev, bytes_out, bytes_in, hits, (latency/hits)
+    time_prev=0
+    bytes_out=0
+    bytes_in=0
+    hits=0
+    latency=0
+  }
+} 
+BEGIN {
+  FS=","
+  time_prev=0
+  bytes_out=0
+  bytes_in=0
+  hits=0
+  latency=0
+}
+' > $graph_data_in
+
+  gnuplot \
+    -e "data_in='$graph_data_in'" \
+    -e "graph_out='$graph_image_out_bytes'" \
+    $graph_bytes_conf
+
+  gnuplot \
+    -e "data_in='$graph_data_in'" \
+    -e "graph_out='$graph_image_out_hits'" \
+    $graph_hits_conf
+
+  gnuplot \
+    -e "data_in='$graph_data_in'" \
+    -e "graph_out='$graph_image_out_latency'" \
+    $graph_latency_conf
+}
+
 main() {
   define_timeout_bin
+  synchronize_pods
 
   case "${RUN}" in
     stress)
-      synchronize_pods
- 
       [ "${STRESS_CPU}" ] && STRESS_CPU="--cpu ${STRESS_CPU}"
       $timeout \
         stress ${STRESS_CPU}
@@ -108,7 +200,6 @@ main() {
     slstress)
       local slstress_log=/tmp/${HOSTNAME}-${gateway}.log
 
-      synchronize_pods
       $timeout \
         slstress \
           -l ${LOGGING_LINE_LENGTH} \
@@ -124,7 +215,6 @@ main() {
     logger)
       local slstress_log=/tmp/${HOSTNAME}-${gateway}.log
 
-      synchronize_pods
       $timeout \
         /usr/local/bin/logger.sh
       $(timeout_exit_status) || die $? "${RUN} failed: $?"
@@ -150,7 +240,6 @@ main() {
       done
 
       # Wait for Cluster Loader start signal webservice
-      synchronize_pods
       results_filename=jmeter-"${HOSTNAME}"-"$(date +%y%m%d%H%M)" 
 
       # Call JMeter packed with ENV vars
@@ -171,39 +260,46 @@ main() {
       local idle_connections=20000
       local dir_test=./
       local targets_awk=targets.awk
-      local targets_lst=$dir_test/targets.txt
-      local latency_html=$dir_test/latency.html
-      local results_bin=$dir_test/results.bin
-      local results_csv=$dir_test/results.csv
+      local targets_lst=$dir_test/targets-${IDENTIFIER}.txt
+      local latency_html=$dir_test/latency-${IDENTIFIER}.html
+      local results_bin=$dir_test/results-${IDENTIFIER}.bin
+      local results_csv=$dir_test/results-${IDENTIFIER}.csv
       local vegeta=/usr/local/bin/vegeta
+      local dir_out=client-${IDENTIFIER:-0}
 
       ulimit -n 1048576	# use the same limits as HAProxy pod
-      sysctl -w net.ipv4.tcp_tw_reuse=1	# safe to use on client side
+#      sysctl -w net.ipv4.tcp_tw_reuse=1	# safe to use on client side
 
       # Length of a content of an exported environment variable is limited by 128k - <variable length> - 1
       # i.e.: for TARGET_HOST the limit is 131059; if you get "Argument list too long", you know you've hit it 
 #      echo $TARGET_HOST | tr ':' '\n' | sed 's|^|GET http://|' > ${targets_lst}
+
       get_cfg ${RUN}/${IDENTIFIER}/${targets_awk} > ${targets_awk} 
-      get_cfg routes | awk -f ${targets_awk} > ${targets_lst} || \
+      get_cfg targets | awk -f ${targets_awk} > ${targets_lst} || \
         die $? "${RUN} failed: $?: unable to retrieve vegeta targets list \`${VEGETA_TARGETS}'"
-      
-      synchronize_pods
+      VEGETA_RPS=$(get_cfg ${RUN}/VEGETA_RPS)
+      PBENCH_DIR=$(get_cfg PBENCH_DIR)
+
       $timeout \
         $vegeta attack -connections ${idle_connections} \
                        -targets=${targets_lst} \
                        -rate=${VEGETA_RPS:-$rate} \
                        -timeout=${requests_timeout} \
-                       -duration=${RUN_TIME}s > ${results_bin} 2>&1 | tee ${vegeta_log} \
-        || die $? "${RUN} failed: $?"
+                       -duration=${RUN_TIME}s > ${results_bin}
+      $(timeout_exit_status) || die $? "${RUN} failed: $?"
 
       # process the results
       $vegeta report < ${results_bin}
       $vegeta dump -dumper csv -inputs=${results_bin} > ${results_csv}
 #      $vegeta report -reporter=plot < ${results_bin} > ${latency_html}	# plotted html files are too large
+      graph_total_latency_pctl ${results_csv} $dir_out
+      graph_time_bytes_hits_latency ${results_csv} $dir_out
 
       have_server "${GUN}" && \
-        scp -p *.txt *.bin *.csv ${vegeta_log} ${latency_html} ${GUN}:${PBENCH_DIR}
-      $(timeout_exit_status) || die $? "${RUN} failed: $?"
+        scp -rp $dir_out *.txt *.csv ${GUN}:${PBENCH_DIR}
+      $(timeout_exit_status) || die $? "${RUN} failed: scp: $?"
+
+      announce_finish
     ;;
 
     *)
