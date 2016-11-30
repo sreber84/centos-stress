@@ -59,6 +59,7 @@ announce_finish() {
 
 get_cfg() {
   local path="$1"
+
   curl -Ls "${url_gun_ws}/${path}"
 }
 
@@ -255,9 +256,6 @@ main() {
 
     vegeta)
       local vegeta_log=/tmp/${HOSTNAME}-${gateway}.log
-      local rate=5000			# rate of client requests [s] (per all targets; i.e. /#targets per target)
-      local requests_timeout=30s	# Requests timeout
-      local idle_connections=20000
       local dir_test=./
       local targets_awk=targets.awk
       local targets_lst=$dir_test/targets-${IDENTIFIER}.txt
@@ -278,14 +276,16 @@ main() {
       get_cfg targets | awk -f ${targets_awk} > ${targets_lst} || \
         die $? "${RUN} failed: $?: unable to retrieve vegeta targets list \`${VEGETA_TARGETS}'"
       VEGETA_RPS=$(get_cfg ${RUN}/VEGETA_RPS)
+      VEGETA_IDLE_CONNECTIONS=$(get_cfg ${RUN}/VEGETA_IDLE_CONNECTIONS)
+      VEGETA_REQUEST_TIMEOUT=$(get_cfg ${RUN}/VEGETA_REQUEST_TIMEOUT)
       PBENCH_DIR=$(get_cfg PBENCH_DIR)
 
       $timeout \
-        $vegeta attack -connections ${idle_connections} \
+        $vegeta attack -connections ${VEGETA_IDLE_CONNECTIONS:-1000} \
                        -targets=${targets_lst} \
-                       -rate=${VEGETA_RPS:-$rate} \
-                       -timeout=${requests_timeout} \
-                       -duration=${RUN_TIME}s > ${results_bin}
+                       -rate=${VEGETA_RPS:-1000} \
+                       -timeout=${VEGETA_REQUEST_TIMEOUT:-0}s \
+                       -duration=${RUN_TIME:-600}s > ${results_bin}
       $(timeout_exit_status) || die $? "${RUN} failed: $?"
 
       # process the results
