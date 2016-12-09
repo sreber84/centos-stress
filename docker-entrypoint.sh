@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 # Some parts written for /bin/bash, see arrays in jmeter
 # Entrypoint script for Load Generator Docker Image
 
@@ -103,89 +103,6 @@ timeout_exit_status() {
   esac
 }
 
-graph_total_latency_pctl() {
-  local results="$1"
-  local dir_out="$2"
-  local graph_conf=$(realpath total_latency_pctl.conf)
-  local graph_data_in_latency=$dir_out/total_latency_pctl.txt
-  local graph_image_out=$dir_out/total_latency_pctl.png
- 
-  mkdir -p $dir_out
-  rm -f $graph_data_in_latency
-  for err in $(awk -F, '{print $2}' $results | sort -u)
-  do
-    printf "%s\t" $err >> $graph_data_in_latency
-    awk -F, "{if(\$2 == $err) {print (\$3/1000000)}}" < $results  | \
-      $pctl_bin >> $graph_data_in_latency
-  done
-  
-  gnuplot \
-    -e "data_in='$graph_data_in_latency'" \
-    -e "graph_out='$graph_image_out'" \
-    $graph_conf
-}
-
-graph_time_bytes_hits_latency() {
-  local results="$1"
-  local dir_out="$2"
-  local graph_data_in=$dir_out/time_bhl.txt
-
-  local graph_bytes_conf=$(realpath time_bytes.conf)
-  local graph_image_out_bytes=$dir_out/time_bytes.png
-
-  local graph_hits_conf=$(realpath time_hits.conf)
-  local graph_image_out_hits=$dir_out/time_hits.png
-
-  local graph_latency_conf=$(realpath time_latency.conf)
-  local graph_image_out_latency=$dir_out/time_latency.png
-
-  mkdir -p $dir_out
-  cat $results | LC_ALL=C sort -t, -n -k1 | \
-  awk '
-{
-  time=int($1/1000000000)
-  latency += ($3/1000000)
-  bytes_out += $4
-  bytes_in += $5
-  hits += 1
-  if(time_prev == 0) {
-    time_prev=time	# we are just beginning
-  }
-  if(time_prev != time) {
-    printf "%ld\t%ld\t%ld\t%ld\t%lf\n", time_prev, bytes_out, bytes_in, hits, (latency/hits)
-    time_prev=0
-    bytes_out=0
-    bytes_in=0
-    hits=0
-    latency=0
-  }
-} 
-BEGIN {
-  FS=","
-  time_prev=0
-  bytes_out=0
-  bytes_in=0
-  hits=0
-  latency=0
-}
-' > $graph_data_in
-
-  gnuplot \
-    -e "data_in='$graph_data_in'" \
-    -e "graph_out='$graph_image_out_bytes'" \
-    $graph_bytes_conf
-
-  gnuplot \
-    -e "data_in='$graph_data_in'" \
-    -e "graph_out='$graph_image_out_hits'" \
-    $graph_hits_conf
-
-  gnuplot \
-    -e "data_in='$graph_data_in'" \
-    -e "graph_out='$graph_image_out_latency'" \
-    $graph_latency_conf
-}
-
 main() {
   define_timeout_bin
   synchronize_pods
@@ -256,15 +173,17 @@ main() {
 
     vegeta)
       local vegeta_log=/tmp/${HOSTNAME}-${gateway}.log
-      local dir_test=./
       local targets_awk=targets.awk
-      local targets_lst=$dir_test/targets-${IDENTIFIER}.txt
-      local latency_html=$dir_test/latency-${IDENTIFIER}.html
-      local results_bin=$dir_test/results-${IDENTIFIER}.bin
-      local results_csv=$dir_test/results-${IDENTIFIER}.csv
-      local vegeta=/usr/local/bin/vegeta
       local dir_out=client-${IDENTIFIER:-0}
+      local targets_lst=$dir_out/targets.txt
+      local latency_html=$dir_out/latency.html
+      local results_bin=$dir_out/results.bin
+      local results_csv=$dir_out/results.csv
+      local vegeta=/usr/local/bin/vegeta
+      local graph_dir=gnuplot/${RUN}
+      local graph_sh=gnuplot/$RUN/graph.sh
 
+      rm -rf ${dir_out} && mkdir -p ${dir_out}
       ulimit -n 1048576	# use the same limits as HAProxy pod
 #      sysctl -w net.ipv4.tcp_tw_reuse=1	# safe to use on client side
 
@@ -274,7 +193,7 @@ main() {
 
       get_cfg ${RUN}/${IDENTIFIER}/${targets_awk} > ${targets_awk} 
       get_cfg targets | awk -f ${targets_awk} > ${targets_lst} || \
-        die $? "${RUN} failed: $?: unable to retrieve vegeta targets list \`${VEGETA_TARGETS}'"
+        die $? "${RUN} failed: $?: unable to retrieve vegeta targets list \`targets'"
       VEGETA_RPS=$(get_cfg ${RUN}/VEGETA_RPS)
       VEGETA_IDLE_CONNECTIONS=$(get_cfg ${RUN}/VEGETA_IDLE_CONNECTIONS)
       VEGETA_REQUEST_TIMEOUT=$(get_cfg ${RUN}/VEGETA_REQUEST_TIMEOUT)
@@ -292,11 +211,58 @@ main() {
       $vegeta report < ${results_bin}
       $vegeta dump -dumper csv -inputs=${results_bin} > ${results_csv}
 #      $vegeta report -reporter=plot < ${results_bin} > ${latency_html}	# plotted html files are too large
-      graph_total_latency_pctl ${results_csv} $dir_out
-      graph_time_bytes_hits_latency ${results_csv} $dir_out
+      rm -f ${results_bin}	# no longer needed, we need ${results_csv}
+      $graph_sh ${graph_dir} ${results_csv} $dir_out/graphs
 
       have_server "${GUN}" && \
-        scp -rp $dir_out *.txt *.csv ${GUN}:${PBENCH_DIR}
+        scp -rp ${dir_out} ${GUN}:${PBENCH_DIR}
+      $(timeout_exit_status) || die $? "${RUN} failed: scp: $?"
+
+      announce_finish
+    ;;
+
+    wrk)
+      local wrk_log=/tmp/${HOSTNAME}-${gateway}.log
+      local requests_awk=requests.awk
+      local dir_out=client-${IDENTIFIER:-0}
+      local requests_json=$dir_out/requests.json
+      local wrk=/usr/local/bin/wrk
+      local wrk_script=wrk.lua
+      local results_csv=$dir_out/results.csv
+      local graph_dir=gnuplot/${RUN}
+      local graph_sh=gnuplot/$RUN/graph.sh
+
+      rm -rf ${dir_out} && mkdir -p ${dir_out}
+      ulimit -n 1048576	# use the same limits as HAProxy pod
+
+      get_cfg ${RUN}/${IDENTIFIER}/${requests_awk} > ${requests_awk} 
+      get_cfg targets | awk -f ${requests_awk} > ${requests_json} || \
+        die $? "${RUN} failed: $?: unable to retrieve wrk targets list \`targets'"
+      ln -sf $dir_out/requests.json	# TODO: look into passing values to "$wrk_script"
+
+      local wrk_threads=`python -c 'import sys, json; print len(json.load(sys.stdin))' < ${requests_json}`
+      local wrk_host=`python -c 'import sys, json; print json.load(sys.stdin)[0]["host"]' < ${requests_json}`
+      local wrk_port=`python -c 'import sys, json; print json.load(sys.stdin)[0]["port"]' < ${requests_json}`
+
+      WRK_THREADS=$(get_cfg ${RUN}/WRK_THREADS)
+      WRK_CLIENTS=$(get_cfg ${RUN}/WRK_CLIENTS)
+      WRK_RPS=$(get_cfg ${RUN}/WRK_RPS)
+      PBENCH_DIR=$(get_cfg PBENCH_DIR)
+
+      $timeout \
+        $wrk \
+          -q \
+          -t${WRK_THREADS:=$wrk_threads} \
+          -c${WRK_CLIENTS:-$WRK_THREADS} \
+          -d${RUN_TIME:-600}s \
+          -R${WRK_RPS:-1000} \
+          -s ${wrk_script} \
+          http://${wrk_host}:${wrk_port} > ${results_csv}
+      $(timeout_exit_status) || die $? "${RUN} failed: $?"
+      $graph_sh ${graph_dir} ${results_csv} $dir_out/graphs
+
+      have_server "${GUN}" && \
+        scp -rp ${dir_out} ${GUN}:${PBENCH_DIR}
       $(timeout_exit_status) || die $? "${RUN} failed: scp: $?"
 
       announce_finish

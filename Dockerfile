@@ -8,24 +8,26 @@ RUN yum install -y bc java-1.8.0-openjdk openssh-clients rsync tar unzip gnuplot
 
 # Setup jmeter
 RUN mkdir -p /opt/jmeter && \
-    curl -Ls http://mirrors.gigenet.com/apache/jmeter/binaries/apache-jmeter-3.0.tgz \
+    curl -Ls https://archive.apache.org/dist/jmeter/binaries/apache-jmeter-3.0.tgz \
 	| tar xz --strip=1 -C /opt/jmeter && \
         echo "jmeter.save.saveservice.url=true" >> /opt/jmeter/bin/jmeter.properties && \
         echo "jmeter.save.saveservice.thread_counts=true" >> /opt/jmeter/bin/jmeter.properties && \
 	echo "jmeter.save.saveservice.autoflush=true" >> /opt/jmeter/bin/user.properties && \
 	ln -s /opt/jmeter/bin/jmeter.sh /usr/bin/jmeter
 
-# Setup slstress and vegeta
+# Setup slstress, vegeta and wrk
 WORKDIR /usr/local/bin
 RUN curl -Ls https://raw.githubusercontent.com/jmencak/perf-tools/master/bin/x86-64/slstress -O \
              https://raw.githubusercontent.com/jmencak/perf-tools/master/slstress_go/logger.sh -O \
              https://raw.githubusercontent.com/jmencak/perf-tools/master/bin/x86-64/vegeta -O \
              https://raw.githubusercontent.com/jmencak/perf-tools/master/bin/x86-64/pctl -O \
-             && chmod 755 ./slstress ./logger.sh ./vegeta ./pctl
+             https://raw.githubusercontent.com/jmencak/perf-tools/master/bin/x86-64/wrk -O && \
+    curl -Ls https://raw.githubusercontent.com/jmencak/perf-tools/master/bin/x86-64/cjson.so >/opt/jmeter/cjson.so && \
+    chmod 755 ./slstress ./logger.sh ./vegeta ./pctl wrk
 
 WORKDIR /opt/jmeter
 COPY JMeterPlugins-Standard-1.4.0.zip JMeterPlugins-Extras-1.4.0.zip docker-entrypoint.sh \
-     test.jmx \*.conf ./
+     test.jmx wrk.lua root ./
 RUN unzip -n \*.zip && \
     rm *.zip
 
