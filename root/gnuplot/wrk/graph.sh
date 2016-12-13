@@ -238,7 +238,7 @@ function main(name) {
     time_prev=time			# we just started
   }
   if(time_prev != time) {
-    print_stats(time)
+    print_stats(time*1000)		# we have a time in seconds, d3js needs ms
     time_prev=time
     clear_stats()
   }
@@ -313,7 +313,7 @@ function main(name) {
     time_prev=time			# we just started
   }
   if(time_prev != time) {
-    print_stats(time)
+    print_stats(time*1000)		# we have a time in seconds, d3js needs ms
     time_prev=time
     clear_stats()
   }
@@ -389,7 +389,7 @@ function main(name) {
     time_prev=time			# we just started
   }
   if(time_prev != time) {
-    print_stats(time)
+    print_stats(time*1000)		# we have a time in seconds, d3js needs ms
     time_prev=time
     clear_stats()
   }
