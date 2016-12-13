@@ -182,6 +182,7 @@ main() {
       local vegeta=/usr/local/bin/vegeta
       local graph_dir=gnuplot/${RUN}
       local graph_sh=gnuplot/$RUN/graph.sh
+      local interval=10			# sample interval for d3js graphs [s]
 
       rm -rf ${dir_out} && mkdir -p ${dir_out}
       ulimit -n 1048576	# use the same limits as HAProxy pod
@@ -209,10 +210,10 @@ main() {
 
       # process the results
       $vegeta report < ${results_bin}
-      $vegeta dump -dumper csv -inputs=${results_bin} > ${results_csv}
+      $vegeta dump -dumper csv -inputs=${results_bin} | LC_ALL=C sort -t, -n -k1 > ${results_csv}
 #      $vegeta report -reporter=plot < ${results_bin} > ${latency_html}	# plotted html files are too large
       rm -f ${results_bin}	# no longer needed, we need ${results_csv}
-      $graph_sh ${graph_dir} ${results_csv} $dir_out/graphs
+      $graph_sh ${graph_dir} ${results_csv} $dir_out/graphs ${interval}
 
       have_server "${GUN}" && \
         scp -rp ${dir_out} ${GUN}:${PBENCH_DIR}
@@ -231,6 +232,7 @@ main() {
       local results_csv=$dir_out/results.csv
       local graph_dir=gnuplot/${RUN}
       local graph_sh=gnuplot/$RUN/graph.sh
+      local interval=10			# sample interval for d3js graphs [s]
 
       rm -rf ${dir_out} && mkdir -p ${dir_out}
       ulimit -n 1048576	# use the same limits as HAProxy pod
@@ -257,9 +259,11 @@ main() {
           -d${RUN_TIME:-600}s \
           -R${WRK_RPS:-1000} \
           -s ${wrk_script} \
-          http://${wrk_host}:${wrk_port} > ${results_csv}
+          http://${wrk_host}:${wrk_port} > ${results_csv}.$$
       $(timeout_exit_status) || die $? "${RUN} failed: $?"
-      $graph_sh ${graph_dir} ${results_csv} $dir_out/graphs
+      LC_ALL=C sort -t, -n -k1 ${results_csv}.$$ > ${results_csv}
+      rm -f ${results_csv}.$$
+      $graph_sh ${graph_dir} ${results_csv} $dir_out/graphs $interval
 
       have_server "${GUN}" && \
         scp -rp ${dir_out} ${GUN}:${PBENCH_DIR}
