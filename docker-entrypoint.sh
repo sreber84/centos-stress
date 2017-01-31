@@ -237,18 +237,21 @@ main() {
       rm -rf ${dir_out} && mkdir -p ${dir_out}
       ulimit -n 1048576	# use the same limits as HAProxy pod
 
+      WRK_THREADS=$(get_cfg ${RUN}/WRK_THREADS)
+      WRK_CLIENTS=$(get_cfg ${RUN}/WRK_CLIENTS)
+      WRK_DELAY=$(get_cfg ${RUN}/WRK_DELAY)
+      PBENCH_DIR=$(get_cfg PBENCH_DIR)
+
       get_cfg ${RUN}/${IDENTIFIER}/${requests_awk} > ${requests_awk} 
-      get_cfg targets | awk -f ${requests_awk} > ${requests_json} || \
+      get_cfg targets | awk \
+        -vdelay_min=0 -vdelay_max=${WRK_DELAY:-1000} \
+        -f ${requests_awk} > ${requests_json} || \
         die $? "${RUN} failed: $?: unable to retrieve wrk targets list \`targets'"
       ln -sf $dir_out/requests.json	# TODO: look into passing values to "$wrk_script"
 
       local wrk_threads=`python -c 'import sys, json; print len(json.load(sys.stdin))' < ${requests_json}`
       local wrk_host=`python -c 'import sys, json; print json.load(sys.stdin)[0]["host"]' < ${requests_json}`
       local wrk_port=`python -c 'import sys, json; print json.load(sys.stdin)[0]["port"]' < ${requests_json}`
-
-      WRK_THREADS=$(get_cfg ${RUN}/WRK_THREADS)
-      WRK_CLIENTS=$(get_cfg ${RUN}/WRK_CLIENTS)
-      PBENCH_DIR=$(get_cfg PBENCH_DIR)
 
       $timeout \
         $wrk \
@@ -321,7 +324,7 @@ main() {
     ;;
 
     *)
-      die 1 "Need to specify what to run."
+      die 1 "No harness for RUN=\"$RUN\"."
     ;;
   esac
   timeout_exit_status
