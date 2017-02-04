@@ -21,13 +21,14 @@ RUN curl -Ls https://raw.githubusercontent.com/jmencak/perf-tools/master/bin/x86
              https://raw.githubusercontent.com/jmencak/perf-tools/master/slstress_go/logger.sh -O \
              https://raw.githubusercontent.com/jmencak/perf-tools/master/bin/x86-64/vegeta -O \
              https://raw.githubusercontent.com/jmencak/perf-tools/master/bin/x86-64/pctl -O \
-             https://raw.githubusercontent.com/jmencak/perf-tools/master/bin/x86-64/wrk -O && \
+             https://raw.githubusercontent.com/jmencak/perf-tools/master/bin/x86-64/wrk -O \
+             https://raw.githubusercontent.com/jmencak/perf-tools/master/bin/x86-64/wrk2 -O && \
     curl -Ls https://raw.githubusercontent.com/jmencak/perf-tools/master/bin/x86-64/cjson.so >/opt/jmeter/cjson.so && \
-    chmod 755 ./slstress ./logger.sh ./vegeta ./pctl wrk
+    chmod 755 slstress logger.sh vegeta pctl wrk wrk2
 
 WORKDIR /opt/jmeter
 COPY JMeterPlugins-Standard-1.4.0.zip JMeterPlugins-Extras-1.4.0.zip docker-entrypoint.sh \
-     test.jmx wrk.lua root ./
+     test.jmx wrk.lua wrk2.lua root ./
 RUN unzip -n \*.zip && \
     rm *.zip
 
