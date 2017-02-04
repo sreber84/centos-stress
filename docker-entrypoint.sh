@@ -45,7 +45,7 @@ have_server() {
 synchronize_pods() {
   have_server "${GUN}" || return
 
-  while [ "$(curl -s ${url_gun_ws}/gotime/start)" != "GO" ] ; do 
+  while [ "$(curl -s ${url_gun_ws}/)" != "GOTIME" ] ; do 
     sleep 5
     fail "${url_gun_ws} not ready"
   done
