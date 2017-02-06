@@ -226,6 +226,7 @@ main() {
       local wrk_log=/tmp/${HOSTNAME}-${gateway}.log
       local requests_awk=requests.awk
       local dir_out=client-${IDENTIFIER:-0}
+      local targets_lst=$dir_out/targets.txt
       local requests_json=$dir_out/requests.json
       local wrk=/usr/local/bin/wrk
       local wrk_script=wrk.lua
@@ -237,13 +238,8 @@ main() {
       rm -rf ${dir_out} && mkdir -p ${dir_out}
       ulimit -n 1048576	# use the same limits as HAProxy pod
 
-      WRK_THREADS=$(get_cfg ${RUN}/WRK_THREADS)
-      WRK_CLIENTS=$(get_cfg ${RUN}/WRK_CLIENTS)
-      WRK_DELAY=$(get_cfg ${RUN}/WRK_DELAY)
-      PBENCH_DIR=$(get_cfg PBENCH_DIR)
-
-      get_cfg ${RUN}/${IDENTIFIER}/${requests_awk} > ${requests_awk} 
-      get_cfg targets | awk \
+#      get_cfg ${RUN}/${IDENTIFIER}/${requests_awk} > ${requests_awk} 
+      cat ${targets_lst} | grep "${WRK_TARGETS_GREP:-.}" | awk \
         -vdelay_min=0 -vdelay_max=${WRK_DELAY:-1000} \
         -f ${requests_awk} > ${requests_json} || \
         die $? "${RUN} failed: $?: unable to retrieve wrk targets list \`targets'"
@@ -253,62 +249,14 @@ main() {
       local wrk_host=`python -c 'import sys, json; print json.load(sys.stdin)[0]["host"]' < ${requests_json}`
       local wrk_port=`python -c 'import sys, json; print json.load(sys.stdin)[0]["port"]' < ${requests_json}`
 
-      $timeout \
-        $wrk \
-          -q \
-          -t${WRK_THREADS:=$wrk_threads} \
-          -c${WRK_CLIENTS:-$WRK_THREADS} \
-          -d${RUN_TIME:-600}s \
-          -s ${wrk_script} \
-          http://${wrk_host}:${wrk_port} > ${results_csv}.$$
-      $(timeout_exit_status) || die $? "${RUN} failed: $?"
-      LC_ALL=C sort -t, -n -k1 ${results_csv}.$$ > ${results_csv}
-      rm -f ${results_csv}.$$
-      $graph_sh ${graph_dir} ${results_csv} $dir_out/graphs $interval
-
-      have_server "${GUN}" && \
-        scp -rp ${dir_out} ${GUN}:${PBENCH_DIR}
-      $(timeout_exit_status) || die $? "${RUN} failed: scp: $?"
-
-      announce_finish
-    ;;
-
-    wrk2)
-      local wrk_log=/tmp/${HOSTNAME}-${gateway}.log
-      local requests_awk=requests.awk
-      local dir_out=client-${IDENTIFIER:-0}
-      local requests_json=$dir_out/requests.json
-      local wrk=/usr/local/bin/wrk2
-      local wrk_script=wrk2.lua
-      local results_csv=$dir_out/results.csv
-      local graph_dir=gnuplot/${RUN}
-      local graph_sh=gnuplot/$RUN/graph.sh
-      local interval=10			# sample interval for d3js graphs [s]
-
-      rm -rf ${dir_out} && mkdir -p ${dir_out}
-      ulimit -n 1048576	# use the same limits as HAProxy pod
-
-      get_cfg ${RUN}/${IDENTIFIER}/${requests_awk} > ${requests_awk} 
-      get_cfg targets | awk -f ${requests_awk} > ${requests_json} || \
-        die $? "${RUN} failed: $?: unable to retrieve wrk targets list \`targets'"
-      ln -sf $dir_out/requests.json	# TODO: look into passing values to "$wrk_script"
-
-      local wrk_threads=`python -c 'import sys, json; print len(json.load(sys.stdin))' < ${requests_json}`
-      local wrk_host=`python -c 'import sys, json; print json.load(sys.stdin)[0]["host"]' < ${requests_json}`
-      local wrk_port=`python -c 'import sys, json; print json.load(sys.stdin)[0]["port"]' < ${requests_json}`
-
-      WRK_THREADS=$(get_cfg ${RUN}/WRK_THREADS)
-      WRK_CLIENTS=$(get_cfg ${RUN}/WRK_CLIENTS)
-      WRK_RPS=$(get_cfg ${RUN}/WRK_RPS)
-      PBENCH_DIR=$(get_cfg PBENCH_DIR)
+      local wrk_conns=$(($wrk_threads * ${WRK_CONNS_PER_THREAD:=1}))
 
       $timeout \
         $wrk \
           -q \
-          -t${WRK_THREADS:=$wrk_threads} \
-          -c${WRK_CLIENTS:-$WRK_THREADS} \
+          -t${wrk_threads} \
+          -c${wrk_conns} \
           -d${RUN_TIME:-600}s \
-          -R${WRK_RPS:-1000} \
           -s ${wrk_script} \
           http://${wrk_host}:${wrk_port} > ${results_csv}.$$
       $(timeout_exit_status) || die $? "${RUN} failed: $?"
