@@ -1,6 +1,10 @@
 # vim:set ft=dockerfile:
 FROM centos:latest 
 
+# Set paths for the json LUA module
+ENV LUA_PATH ";;/usr/share/lua/5.1/?.lua"
+ENV LUA_CPATH ";;/usr/lib64/lua/5.1/?.so"
+
 # Install required packages 
 RUN yum install -y bc gcc git gnuplot go java-1.8.0-openjdk lua-devel make \
                    openssh-clients rsync tar unzip && \
@@ -9,8 +13,8 @@ RUN yum install -y bc gcc git gnuplot go java-1.8.0-openjdk lua-devel make \
                         https://dl.fedoraproject.org/pub/epel/7/x86_64/l/lua-lpeg-0.12-1.el7.x86_64.rpm && \
     mkdir -p build /opt/jmeter && \
     cd build && \
-    git clone -b stable https://github.com/jmencak/wrk.git \
-      && cd wrk && make && cp ./wrk /usr/local/bin && cd .. && \
+    git clone -b stable https://github.com/jmencak/wrk.git && \
+      cd wrk && make && cp ./wrk /usr/local/bin && cd .. && \
     curl -Ls https://www.kyne.com.au/~mark/software/download/lua-cjson-2.1.0.tar.gz \
       | tar xz && cd lua-cjson-2.1.0 && make && cp cjson.so /opt/jmeter/ && cd .. && \
     git clone https://github.com/jmencak/perf-tools.git && \
