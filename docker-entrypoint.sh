@@ -33,6 +33,43 @@ Usage: $ProgramName
 EOF
 }
 
+use_option() {
+  local option="$1"
+  local env_var="$2"
+  local empty_sets="${3:-n}"
+  local neg="${4:-n}"
+  eval local env_var_val='$'"$env_var"
+
+  test "$env_var_val" || {
+    if test "$empty_sets" = y ; then
+      echo -n $option
+    else
+      :
+    fi
+    return 0
+  }
+
+  case "$env_var_val" in
+    [Yy]) 
+      if test "$neg" = y ; then
+        :
+      else
+        echo -n "$option"
+      fi
+    ;;
+
+    [Nn])
+      if test "$neg" = y ; then
+        echo -n "$option"
+      else
+        :
+      fi
+    ;;
+    
+    *) die 1 "invalid value \`$env_var_val\` for $env_var" ;;
+  esac
+}
+
 have_server() {
   local server="$1"
   if test "${server}" = "127.0.0.1" || test "${server}" = "" ; then
@@ -174,7 +211,7 @@ main() {
     vegeta)
       local vegeta_log=/tmp/${HOSTNAME}-${gateway}.log
       local targets_awk=targets.awk
-      local dir_out=client-${IDENTIFIER:-0}
+      local dir_out=${RUN}-${HOSTNAME:-${IDENTIFIER:-0}}
       local targets_lst=$dir_out/targets.txt
       local latency_html=$dir_out/latency.html
       local results_bin=$dir_out/results.bin
@@ -225,31 +262,35 @@ main() {
     wrk)
       local wrk_log=/tmp/${HOSTNAME}-${gateway}.log
       local requests_awk=requests.awk
-      local dir_out=client-${IDENTIFIER:-0}
-      local targets_lst=$dir_out/targets.txt
+      local dir_out=${RUN}-${HOSTNAME:-${IDENTIFIER:-0}}
+      local targets_lst=/opt/wlg/targets.txt
       local requests_json=$dir_out/requests.json
       local wrk=/usr/local/bin/wrk
       local wrk_script=wrk.lua
+      local env_out=$dir_out/environment	# for debugging
       local results_csv=$dir_out/results.csv
       local graph_dir=gnuplot/${RUN}
       local graph_sh=gnuplot/$RUN/graph.sh
       local interval=10			# sample interval for d3js graphs [s]
+      local tls_session_reuse=""
 
       rm -rf ${dir_out} && mkdir -p ${dir_out}
       ulimit -n 1048576	# use the same limits as HAProxy pod
+      env > $env_out
 
-#      get_cfg ${RUN}/${IDENTIFIER}/${requests_awk} > ${requests_awk} 
-      cat ${targets_lst} | grep "${WRK_TARGETS_GREP:-.}" | awk \
+      cat ${targets_lst} | grep "${WRK_TARGETS:-.}" | awk \
         -vdelay_min=0 -vdelay_max=${WRK_DELAY:-1000} \
         -f ${requests_awk} > ${requests_json} || \
         die $? "${RUN} failed: $?: unable to retrieve wrk targets list \`targets'"
-      ln -sf $dir_out/requests.json	# TODO: look into passing values to "$wrk_script"
+      ln -sf $dir_out/requests.json	# TODO: look into passing values to "$wrk_script"'s init()
 
       local wrk_threads=`python -c 'import sys, json; print len(json.load(sys.stdin))' < ${requests_json}`
+      test "${wrk_threads}" -eq 0 && die 1 "no targets to test against"
       local wrk_host=`python -c 'import sys, json; print json.load(sys.stdin)[0]["host"]' < ${requests_json}`
       local wrk_port=`python -c 'import sys, json; print json.load(sys.stdin)[0]["port"]' < ${requests_json}`
-
       local wrk_conns=$(($wrk_threads * ${WRK_CONNS_PER_THREAD:=1}))
+      local no_keepalive=$(use_option "--no_keepalive" WRK_KEEPALIVE n y)		# keepalive is enabled by default
+      local tls_session_reuse=$(use_option "--reuse" WRK_TLS_SESSION_REUSE n n)		# TLS session reuse is disabled by default
 
       $timeout \
         $wrk \
@@ -257,6 +298,8 @@ main() {
           -t${wrk_threads} \
           -c${wrk_conns} \
           -d${RUN_TIME:-600}s \
+          ${no_keepalive} \
+          ${tls_session_reuse} \
           -s ${wrk_script} \
           http://${wrk_host}:${wrk_port} > ${results_csv}.$$
       $(timeout_exit_status) || die $? "${RUN} failed: $?"
