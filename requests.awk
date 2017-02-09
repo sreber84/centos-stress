@@ -6,7 +6,7 @@
   printf "    \"host\": \"%s\",\n", $1
   printf "    \"port\": \"80\",\n"
   printf "    \"method\": \"GET\",\n"
-  printf "    \"path\": \"/1024.html\",\n"
+  printf "    \"path\": \"%s\",\n", path
 #  printf "    \"headers\": {\n"
 #  printf "      \"Content-Type\": \"application/x-www-form-urlencoded\",\n"
 #  printf "      \"X-Custom-Header-2\": \"test 2\"\n"
@@ -26,7 +26,7 @@
   printf "    \"host\": \"%s\",\n", $1
   printf "    \"port\": \"443\",\n"
   printf "    \"method\": \"GET\",\n"
-  printf "    \"path\": \"/1024.html\",\n"
+  printf "    \"path\": \"%s\",\n", path
 #  printf "    \"headers\": {\n"
 #  printf "      \"Content-Type\": \"application/x-www-form-urlencoded\",\n"
 #  printf "      \"X-Custom-Header-2\": \"test 2\"\n"
@@ -46,7 +46,7 @@
   printf "    \"host\": \"%s\",\n", $1
   printf "    \"port\": \"80\",\n"
   printf "    \"method\": \"GET\",\n"
-  printf "    \"path\": \"/\",\n"
+  printf "    \"path\": \"%s\",\n", path
   printf "    \"delay\": {\n"
   printf "      \"min\": \"%s\",\n", delay_min
   printf "      \"max\": \"%s\"\n", delay_max
@@ -61,7 +61,7 @@
   printf "    \"host\": \"%s\",\n", $1
   printf "    \"port\": \"80\",\n"
   printf "    \"method\": \"POST\",\n"
-  printf "    \"path\": \"/\",\n"
+  printf "    \"path\": \"%s\",\n", path
   printf "    \"headers\": {\n"
   printf "      \"Content-Type\": \"application/x-www-form-urlencoded\"\n"
   printf "    },\n"
@@ -95,7 +95,7 @@
   printf "    \"host\": \"%s\",\n", $1
   printf "    \"port\": \"80\",\n"
   printf "    \"method\": \"POST\",\n"
-  printf "    \"path\": \"/\",\n"
+  printf "    \"path\": \"%s\",\n", path
   printf "    \"headers\": {\n"
   printf "      \"Content-Type\": \"application/x-www-form-urlencoded\"\n"
   printf "    },\n"
@@ -114,7 +114,7 @@
   printf "    \"host\": \"%s\",\n", $1
   printf "    \"port\": \"80\",\n"
   printf "    \"method\": \"GET\",\n"
-  printf "    \"path\": \"/\",\n"
+  printf "    \"path\": \"%s\",\n", path
   printf "    \"delay\": {\n"
   printf "      \"min\": \"%s\",\n", delay_min
   printf "      \"max\": \"%s\"\n", delay_max
@@ -129,7 +129,7 @@
   printf "    \"host\": \"%s\",\n", $1
   printf "    \"port\": \"80\",\n"
   printf "    \"method\": \"GET\",\n"
-  printf "    \"path\": \"/\",\n"
+  printf "    \"path\": \"%s\",\n", path
   printf "    \"delay\": {\n"
   printf "      \"min\": \"%s\",\n", delay_min
   printf "      \"max\": \"%s\"\n", delay_max
@@ -144,7 +144,7 @@
   printf "    \"host\": \"%s\",\n", $1
   printf "    \"port\": \"80\",\n"
   printf "    \"method\": \"POST\",\n"
-  printf "    \"path\": \"/\",\n"
+  printf "    \"path\": \"%s\",\n", path
   printf "    \"headers\": {\n"
   printf "      \"Content-Type\": \"application/x-www-form-urlencoded\"\n"
   printf "    },\n"
@@ -163,7 +163,7 @@
   printf "    \"host\": \"%s\",\n", $1
   printf "    \"port\": \"443\",\n"
   printf "    \"method\": \"POST\",\n"
-  printf "    \"path\": \"/\",\n"
+  printf "    \"path\": \"%s\",\n", path
   printf "    \"headers\": {\n"
   printf "      \"Content-Type\": \"application/x-www-form-urlencoded\"\n"
   printf "    },\n"

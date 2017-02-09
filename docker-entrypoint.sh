@@ -276,10 +276,11 @@ main() {
 
       rm -rf ${dir_out} && mkdir -p ${dir_out}
       ulimit -n 1048576	# use the same limits as HAProxy pod
+      sysctl -w net.ipv4.tcp_tw_reuse=1	# safe to use on client side
       env > $env_out
 
       cat ${targets_lst} | grep "${WRK_TARGETS:-.}" | awk \
-        -vdelay_min=0 -vdelay_max=${WRK_DELAY:-1000} \
+        -vpath=${URL_PATH:-/} -vdelay_min=0 -vdelay_max=${WRK_DELAY:-1000} \
         -f ${requests_awk} > ${requests_json} || \
         die $? "${RUN} failed: $?: unable to retrieve wrk targets list \`targets'"
       ln -sf $dir_out/requests.json	# TODO: look into passing values to "$wrk_script"'s init()
