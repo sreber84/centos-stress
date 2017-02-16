@@ -152,21 +152,6 @@ main() {
       $(timeout_exit_status) || die $? "${RUN} failed: $?"
       ;;
 
-    slstress)
-      local slstress_log=/tmp/${HOSTNAME}-${gateway}.log
-
-      $timeout \
-        slstress \
-          -l ${LOGGING_LINE_LENGTH} \
-          -w \
-          ${LOGGING_DELAY} > ${slstress_log}
-      $(timeout_exit_status) || die $? "${RUN} failed: $?"
-
-      if have_server "${GUN}" ; then
-        scp -p ${slstress_log} ${GUN}:${PBENCH_DIR}
-      fi
-    ;;
-
     logger)
       local slstress_log=/tmp/${HOSTNAME}-${gateway}.log
 
@@ -207,57 +192,6 @@ main() {
 
       have_server "${GUN}" && scp -p *.jtl *.log *.png ${GUN}:${PBENCH_DIR}
     ;; 
-
-    vegeta)
-      local vegeta_log=/tmp/${HOSTNAME}-${gateway}.log
-      local targets_awk=targets.awk
-      local dir_out=${RUN}-${HOSTNAME:-${IDENTIFIER:-0}}
-      local targets_lst=$dir_out/targets.txt
-      local latency_html=$dir_out/latency.html
-      local results_bin=$dir_out/results.bin
-      local results_csv=$dir_out/results.csv
-      local vegeta=/usr/local/bin/vegeta
-      local graph_dir=gnuplot/${RUN}
-      local graph_sh=gnuplot/$RUN/graph.sh
-      local interval=10			# sample interval for d3js graphs [s]
-
-      rm -rf ${dir_out} && mkdir -p ${dir_out}
-      ulimit -n 1048576	# use the same limits as HAProxy pod
-#      sysctl -w net.ipv4.tcp_tw_reuse=1	# safe to use on client side
-
-      # Length of a content of an exported environment variable is limited by 128k - <variable length> - 1
-      # i.e.: for TARGET_HOST the limit is 131059; if you get "Argument list too long", you know you've hit it 
-#      echo $TARGET_HOST | tr ':' '\n' | sed 's|^|GET http://|' > ${targets_lst}
-
-      get_cfg ${RUN}/${IDENTIFIER}/${targets_awk} > ${targets_awk} 
-      get_cfg targets | awk -f ${targets_awk} > ${targets_lst} || \
-        die $? "${RUN} failed: $?: unable to retrieve vegeta targets list \`targets'"
-      VEGETA_RPS=$(get_cfg ${RUN}/VEGETA_RPS)
-      VEGETA_IDLE_CONNECTIONS=$(get_cfg ${RUN}/VEGETA_IDLE_CONNECTIONS)
-      VEGETA_REQUEST_TIMEOUT=$(get_cfg ${RUN}/VEGETA_REQUEST_TIMEOUT)
-      PBENCH_DIR=$(get_cfg PBENCH_DIR)
-
-      $timeout \
-        $vegeta attack -connections ${VEGETA_IDLE_CONNECTIONS:-1000} \
-                       -targets=${targets_lst} \
-                       -rate=${VEGETA_RPS:-1000} \
-                       -timeout=${VEGETA_REQUEST_TIMEOUT:-0}s \
-                       -duration=${RUN_TIME:-600}s > ${results_bin}
-      $(timeout_exit_status) || die $? "${RUN} failed: $?"
-
-      # process the results
-      $vegeta report < ${results_bin}
-      $vegeta dump -dumper csv -inputs=${results_bin} | LC_ALL=C sort -t, -n -k1 > ${results_csv}
-#      $vegeta report -reporter=plot < ${results_bin} > ${latency_html}	# plotted html files are too large
-      rm -f ${results_bin}	# no longer needed, we need ${results_csv}
-      $graph_sh ${graph_dir} ${results_csv} $dir_out/graphs ${interval}
-
-      have_server "${GUN}" && \
-        scp -rp ${dir_out} ${GUN}:${PBENCH_DIR}
-      $(timeout_exit_status) || die $? "${RUN} failed: scp: $?"
-
-      announce_finish
-    ;;
 
     wrk)
       local wrk_log=/tmp/${HOSTNAME}-${gateway}.log
