@@ -271,13 +271,13 @@ main() {
       local results_csv=$dir_out/results.csv
       local graph_dir=gnuplot/${RUN}
       local graph_sh=gnuplot/$RUN/graph.sh
-      local interval=10			# sample interval for d3js graphs [s]
+      local interval=10				# sample interval for d3js graphs [s]
       local tls_session_reuse=""
 
       rm -rf ${dir_out} && mkdir -p ${dir_out}
-      ulimit -n 1048576	# use the same limits as HAProxy pod
-      sysctl -w net.ipv4.tcp_tw_reuse=1	# safe to use on client side
-      env > $env_out
+      ulimit -n 1048576				# use the same limits as HAProxy pod
+      #sysctl -w net.ipv4.tcp_tw_reuse=1	# safe to use on client side
+      env > $env_out				# dump out the environment for debugging
 
       cat ${targets_lst} | grep "${WRK_TARGETS:-.}" | awk \
         -vpath=${URL_PATH:-/} -vdelay_min=0 -vdelay_max=${WRK_DELAY:-1000} \

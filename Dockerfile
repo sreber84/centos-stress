@@ -12,6 +12,9 @@ RUN yum install -y bc gcc git gnuplot go java-1.8.0-openjdk lua-devel make \
                         https://dl.fedoraproject.org/pub/epel/7/x86_64/l/lua-json-1.3.2-2.el7.noarch.rpm \
                         https://dl.fedoraproject.org/pub/epel/7/x86_64/l/lua-lpeg-0.12-1.el7.x86_64.rpm && \
     mkdir -p build /opt/jmeter && \
+    curl -Ls https://jmeter-plugins.org/downloads/file/JMeterPlugins-Standard-1.4.0.zip -O \
+             https://jmeter-plugins.org/downloads/file/JMeterPlugins-Extras-1.4.0.zip -O && \
+      unzip -n \*.zip -d /opt/jmeter && rm *.zip && \
     cd build && \
     git clone -b stable https://github.com/jmencak/wrk.git && \
       cd wrk && make && cp ./wrk /usr/local/bin && cd .. && \
@@ -33,9 +36,6 @@ RUN curl -Ls https://archive.apache.org/dist/jmeter/binaries/apache-jmeter-3.0.t
 	ln -s /opt/jmeter/bin/jmeter.sh /usr/bin/jmeter
 
 WORKDIR /opt/jmeter
-COPY JMeterPlugins-Standard-1.4.0.zip JMeterPlugins-Extras-1.4.0.zip docker-entrypoint.sh \
-     requests.awk test.jmx wrk.lua root ./
-RUN unzip -n \*.zip && \
-    rm *.zip
+COPY docker-entrypoint.sh requests.awk test.jmx wrk.lua root ./
 
 CMD ["./docker-entrypoint.sh"]
