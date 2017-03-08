@@ -56,7 +56,7 @@ use_option() {
       else
         echo -n "$option"
       fi
-    ;;
+      ;;
 
     [Nn])
       if test "$neg" = y ; then
@@ -64,9 +64,11 @@ use_option() {
       else
         :
       fi
-    ;;
+      ;;
     
-    *) die 1 "invalid value \`$env_var_val\` for $env_var" ;;
+    *)
+      die 1 "invalid value \`$env_var_val\` for $env_var"
+      ;;
   esac
 }
 
@@ -107,19 +109,26 @@ define_timeout_bin() {
   timeout -t 0 /bin/sleep 0 >/dev/null 2>&1
 
   case $? in
-    0)   # we have a busybox timeout with '-t' option for number of seconds
-       timeout="timeout -t ${RUN_TIME}"
-    ;;
-    1)   # we have toybox's timeout without the '-t' option for number of seconds
-       timeout="timeout ${RUN_TIME}"
-    ;;
-    125) # we have coreutil's timeout without the '-t' option for number of seconds
-       timeout="timeout ${RUN_TIME}"
-    ;;
-    *)   # couldn't find timeout or unknown version
-       warn "running without timeout"
-       timeout=""
-    ;;
+    # we have a busybox timeout with '-t' option for number of seconds
+    0)
+      timeout="timeout -t ${RUN_TIME}"
+      ;;
+
+    # we have toybox's timeout without the '-t' option for number of seconds
+    1)   
+      timeout="timeout ${RUN_TIME}"
+      ;;
+
+    # we have coreutil's timeout without the '-t' option for number of seconds
+    125)
+      timeout="timeout ${RUN_TIME}"
+      ;;
+
+    # couldn't find timeout or unknown version
+    *)
+      warn "running without timeout"
+      timeout=""
+      ;;
   esac
 }
 
@@ -127,16 +136,24 @@ timeout_exit_status() {
   local err="${1:-$?}"
 
   case $err in
-    124) # coreutil's return code for timeout
-       return 0
-    ;;
-    137) # timeout also sends SIGKILL if a process fails to respond
-       return 0
-    ;;
-    143) # busybox's return code for timeout with default signal TERM
-       return 0
-    ;;
-    *) return $err
+    # coreutil's return code for timeout
+    124)
+      return 0
+      ;;
+
+    # timeout also sends SIGKILL if a process fails to respond
+    137)
+      return 0
+      ;;
+
+    # busybox's return code for timeout with default signal TERM
+    143)
+      return 0
+      ;;
+
+    *)
+      return $err
+      ;;
   esac
 }
 
@@ -158,7 +175,7 @@ main() {
       $timeout \
         /usr/local/bin/logger.sh
       $(timeout_exit_status) || die $? "${RUN} failed: $?"
-    ;;
+      ;;
 
     jmeter)
       IFS=$'\n'
@@ -191,7 +208,7 @@ main() {
         -j "${results_filename}".log -Jgun="${GUN}" || die $? "${RUN} failed: $?"
 
       have_server "${GUN}" && scp -p *.jtl *.log *.png ${GUN}:${PBENCH_DIR}
-    ;; 
+      ;; 
 
     wrk)
       local wrk_log=/tmp/${HOSTNAME}-${gateway}.log
@@ -241,17 +258,18 @@ main() {
       LC_ALL=C sort -t, -n -k1 ${results_csv}.$$ > ${results_csv}
       rm -f ${results_csv}.$$
       $graph_sh ${graph_dir} ${results_csv} $dir_out/graphs $interval
+      xz -0 -T0 < ${results_csv} > ${results_csv}.xz && rm -f ${results_csv}
 
       have_server "${GUN}" && \
         scp -rp ${dir_out} ${GUN}:${PBENCH_DIR}
       $(timeout_exit_status) || die $? "${RUN} failed: scp: $?"
 
       announce_finish
-    ;;
+      ;;
 
     *)
       die 1 "No harness for RUN=\"$RUN\"."
-    ;;
+      ;;
   esac
   timeout_exit_status
 }
