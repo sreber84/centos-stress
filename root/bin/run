@@ -7,9 +7,6 @@ ProgramName=${0##*/}
 # Global variables
 pctl_bin=pctl
 url_gun_ws="http://${GUN}:9090"
-gw_hex=$(grep ^eth0 /proc/net/route | head -1 | awk '{print $3}')
-#gateway=$(/sbin/ip route|awk '/default/ { print $3 }')	# sometimes there is no /sbin/ip ...
-gateway=$(printf "%d.%d.%d.%d" 0x${gw_hex:6:2} 0x${gw_hex:4:2} 0x${gw_hex:2:2} 0x${gw_hex:0:2})
 JVM_ARGS=${JVM_ARGS:--Xms512m -Xmx4096m}	# increase heap size by default
 
 fail() {
@@ -82,9 +79,10 @@ have_server() {
 
 # Wait for all the pods to be in the Running state
 synchronize_pods() {
+  local connect_timeout=15		# 15 second connection timeout
   have_server "${GUN}" || return
 
-  while [ "$(curl -s ${url_gun_ws}/)" != "GOTIME" ] ; do 
+  while ! curl --connect-timeout ${connect_timeout:-15} -s "${url_gun_ws}/" ; do 
     sleep 5
     fail "${url_gun_ws} not ready"
   done
@@ -93,7 +91,7 @@ synchronize_pods() {
 announce_finish() {
   have_server "${GUN}" || return
 
-  curl -s ${url_gun_ws}/gotime/finish
+  curl -s ${url_gun_ws}/stop
 }
 
 get_cfg() {
@@ -166,15 +164,7 @@ main() {
       [ "${STRESS_CPU}" ] && STRESS_CPU="--cpu ${STRESS_CPU}"
       $timeout \
         stress ${STRESS_CPU}
-      $(timeout_exit_status) || die $? "${RUN} failed: $?"
-      ;;
-
-    logger)
-      local slstress_log=/tmp/${HOSTNAME}-${gateway}.log
-
-      $timeout \
-        /usr/local/bin/logger.sh
-      $(timeout_exit_status) || die $? "${RUN} failed: $?"
+      timeout_exit_status || die $? "${RUN} failed: $?"
       ;;
 
     jmeter)
@@ -200,24 +190,24 @@ main() {
       results_filename=jmeter-"${HOSTNAME}"-"$(date +%y%m%d%H%M)" 
 
       # Call JMeter packed with ENV vars
-      jmeter -n -t test.jmx -Jnum=${NUM} -Jramp=${JMETER_RAMP} \
+      jmeter.sh -n -t test.jmx -Jnum=${NUM} -Jramp=${JMETER_RAMP} \
         -Jduration=${RUN_TIME} -Jtpm=${JMETER_TPS} \
         ${ips} \
         -Jport=${TARGET_PORT} \
         -Jresults_file="${results_filename}".jtl -l "${results_filename}".jtl \
         -j "${results_filename}".log -Jgun="${GUN}" || die $? "${RUN} failed: $?"
 
-      have_server "${GUN}" && scp -p *.jtl *.log *.png ${GUN}:${PBENCH_DIR}
+      have_server "${GUN}" && scp -o StrictHostKeyChecking=false -p *.jtl *.log *.png ${GUN}:${PBENCH_DIR}
       ;; 
 
-    wrk)
-      local wrk_log=/tmp/${HOSTNAME}-${gateway}.log
-      local requests_awk=requests.awk
-      local dir_out=${RUN}-${HOSTNAME:-${IDENTIFIER:-0}}
-      local targets_lst=/opt/wlg/targets.txt
+    mb)
+      local requests_awk=requests-mb.awk
+      local dir_out=${RESULTS_DIR:-${RUN}-${HOSTNAME:-${IDENTIFIER:-0}}}
+      local mb_log=$dir_out/${RUN}.log
+      local targets_list=/opt/wlg/targets.txt
+      local targets_json=/opt/wlg/targets.json
       local requests_json=$dir_out/requests.json
-      local wrk=/usr/local/bin/wrk
-      local wrk_script=wrk.lua
+      local mb=/usr/local/bin/mb
       local env_out=$dir_out/environment	# for debugging
       local results_csv=$dir_out/results.csv
       local graph_dir=gnuplot/${RUN}
@@ -230,41 +220,41 @@ main() {
       #sysctl -w net.ipv4.tcp_tw_reuse=1	# safe to use on client side
       env > $env_out				# dump out the environment for debugging
 
-      cat ${targets_lst} | grep "${WRK_TARGETS:-.}" | awk \
-        -vpath=${URL_PATH:-/} -vdelay_min=0 -vdelay_max=${WRK_DELAY:-1000} \
-        -f ${requests_awk} > ${requests_json} || \
-        die $? "${RUN} failed: $?: unable to retrieve wrk targets list \`targets'"
-      ln -sf $dir_out/requests.json	# TODO: look into passing values to "$wrk_script"'s init()
+      local tls_session_reuse=$(use_option "true" MB_TLS_SESSION_REUSE n n)		# TLS session reuse is disabled by default
 
-      local wrk_threads=`python -c 'import sys, json; print len(json.load(sys.stdin))' < ${requests_json}`
-      test "${wrk_threads}" -eq 0 && die 1 "no targets to test against"
-      local wrk_host=`python -c 'import sys, json; print json.load(sys.stdin)[0]["host"]' < ${requests_json}`
-      local wrk_port=`python -c 'import sys, json; print json.load(sys.stdin)[0]["port"]' < ${requests_json}`
-      local wrk_conns=$(($wrk_threads * ${WRK_CONNS_PER_THREAD:=1}))
-      local no_keepalive=$(use_option "--no_keepalive" WRK_KEEPALIVE n y)		# keepalive is enabled by default
-      local tls_session_reuse=$(use_option "--reuse" WRK_TLS_SESSION_REUSE n n)		# TLS session reuse is disabled by default
+      if test -r "${targets_json}" ; then
+        cp ${targets_json} ${requests_json}
+      elif test -r "${targets_list}" ; then
+        cat ${targets_list} | grep -E "${MB_TARGETS:-.}" | awk \
+          -vtls_session_reuse=${tls_session_reuse:-false} \
+          -vport=${MB_PORT:-80} \
+          -vka_requests=${MB_KA_REQUESTS:-100} -vclients=${MB_CONNS_PER_TARGET:-10} \
+          -vpath=${URL_PATH:-/} -vdelay_min=0 -vdelay_max=${MB_DELAY:-1000} \
+          -f ${requests_awk} > ${requests_json} || \
+          die $? "${RUN} failed: $?: unable to retrieve mb targets list \`targets'"
+      else
+        die 1 "${RUN} failed: 1: no targets provided."
+      fi
 
       $timeout \
-        $wrk \
-          -q \
-          -t${wrk_threads} \
-          -c${wrk_conns} \
-          -d${RUN_TIME:-600}s \
-          ${no_keepalive} \
-          ${tls_session_reuse} \
-          -s ${wrk_script} \
-          http://${wrk_host}:${wrk_port} > ${results_csv}.$$
-      $(timeout_exit_status) || die $? "${RUN} failed: $?"
+        $mb \
+          -d${RUN_TIME:-600} \
+          -r${MB_RAMP_UP:-0} \
+          -i ${requests_json} \
+          -o ${results_csv}.$$ > $mb_log 2>&1
+      timeout_exit_status || die $? "${RUN} failed: $?"
       LC_ALL=C sort -t, -n -k1 ${results_csv}.$$ > ${results_csv}
       rm -f ${results_csv}.$$
       $graph_sh ${graph_dir} ${results_csv} $dir_out/graphs $interval
-      xz -0 -T0 < ${results_csv} > ${results_csv}.xz && rm -f ${results_csv}
+      xz -0 -T0 ${results_csv}
 
-      have_server "${GUN}" && \
-        scp -rp ${dir_out} ${GUN}:${PBENCH_DIR}
-      $(timeout_exit_status) || die $? "${RUN} failed: scp: $?"
-
-      announce_finish
+      if have_server "${SERVER_RESULTS}" ; then
+        scp -o StrictHostKeyChecking=false -rp ${dir_out} ${SERVER_RESULTS}
+      elif have_server "${GUN}" ; then
+        # preserve backwards compatibility with the python cluster loader/old configs
+        scp -o StrictHostKeyChecking=false -rp ${dir_out} ${GUN}:${PBENCH_DIR}
+      fi
+      timeout_exit_status || die $? "${RUN} failed: scp: $?"
       ;;
 
     *)
