@@ -8,7 +8,7 @@ RUN yum install -y bc java-1.8.0-openjdk openssh-clients rsync tar unzip && \
 
 # Setup jmeter
 RUN mkdir -p /opt/jmeter && \
-    curl -Ls http://mirrors.gigenet.com/apache/jmeter/binaries/apache-jmeter-3.0.tgz \
+    curl -Ls https://archive.apache.org/dist/jmeter/binaries/apache-jmeter-3.0.tgz \
 	| tar xz --strip=1 -C /opt/jmeter && \
         echo "jmeter.save.saveservice.url=true" >> /opt/jmeter/bin/jmeter.properties && \
         echo "jmeter.save.saveservice.thread_counts=true" >> /opt/jmeter/bin/jmeter.properties && \
